@@ -803,28 +803,49 @@ with tab2:
         
         # Button to generate incidents
         if st.button("🔄 Generate Incidents", use_container_width=True, type="primary"):
+            # Auto-load network if not loaded
             if st.session_state.G is None:
-                st.error("❌ Network not loaded! Go to Optimization tab first.")
-            else:
-                with st.spinner("🔄 Generating incident locations and types..."):
-                    random.seed(int(time.time()))
-                    ORIGEN, DESTINOS = generar_origen_destinos(
-                        st.session_state.G,
-                        st.session_state.num_incidentes
-                    )
-                    st.session_state.ORIGEN = ORIGEN
-                    st.session_state.DESTINOS = DESTINOS
-                    st.session_state.incidentes_generados = True
-                    st.success(f"✅ Generated {len(DESTINOS)} incidents!")
-                    st.rerun()
+                with st.spinner("📡 Loading street network (first time)..."):
+                    G = descargar_red(LATITUD_CENTRO, LONGITUD_CENTRO, RADIO_METROS)
+                    if G is None:
+                        st.error("❌ Failed to download network. Check your internet connection.")
+                        st.stop()
+                    st.session_state.G = G
+                    st.success(f"✅ Network loaded: {len(G.nodes())} nodes")
+            
+            # Generate incidents
+            with st.spinner("🔄 Generating incident locations and types..."):
+                random.seed(int(time.time()))
+                ORIGEN, DESTINOS = generar_origen_destinos(
+                    st.session_state.G,
+                    st.session_state.num_incidentes
+                )
+                st.session_state.ORIGEN = ORIGEN
+                st.session_state.DESTINOS = DESTINOS
+                st.session_state.incidentes_generados = True
+                st.success(f"✅ Generated {len(DESTINOS)} incidents!")
+                st.rerun()
         
-        st.info(f"""
-        **Current Configuration:**
-        - Requested Incidents: {st.session_state.num_incidentes}
-        - Available Ambulances: {len(st.session_state.ambulancias)}
-        - Location: Medellín, Colombia
-        - Coverage Radius: {RADIO_METROS}m
-        """)
+        # Network status
+        if st.session_state.G is None:
+            st.info(f"""
+            **Current Configuration:**
+            - Requested Incidents: {st.session_state.num_incidentes}
+            - Available Ambulances: {len(st.session_state.ambulancias)}
+            - Location: Medellín, Colombia
+            - Coverage Radius: {RADIO_METROS}m
+            
+            ℹ️ **Network will load automatically when you generate incidents**
+            """)
+        else:
+            st.success(f"""
+            **Current Configuration:**
+            - Requested Incidents: {st.session_state.num_incidentes}
+            - Available Ambulances: {len(st.session_state.ambulancias)}
+            - Location: Medellín, Colombia
+            - Coverage Radius: {RADIO_METROS}m
+            - Network: {len(st.session_state.G.nodes())} nodes, {len(st.session_state.G.edges())} edges ✅
+            """)
     
     with col2:
         st.subheader("📊 Current Incidents")
