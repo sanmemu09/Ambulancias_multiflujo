@@ -947,12 +947,17 @@ with tab4:
         
         with st.spinner("🗺️ Generating map..."):
             mapa = crear_mapa(st.session_state.G, resultado)
-            st_folium(
-                mapa, 
-                width=1200, 
-                height=600,
-                returned_objects=[]
-            )
+            
+            # Save map to HTML string
+            from io import BytesIO
+            import base64
+            
+            # Convert map to HTML
+            map_html = mapa._repr_html_()
+            
+            # Display using components.html
+            import streamlit.components.v1 as components
+            components.html(map_html, height=600, scrolling=True)
         
         st.divider()
         
