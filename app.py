@@ -36,9 +36,6 @@ GAMMA = 1.0   # Operational cost weight
 # Big-M constraint
 M = 10000
 
-# Relaxation factor
-FACTOR_RELAJACION = 1.4
-
 # Page configuration
 st.set_page_config(
     page_title="Ambulance Optimizer",
@@ -189,7 +186,7 @@ def generar_origen_destinos(G, num_incidentes):
     
     return ORIGEN, DESTINOS
 
-def resolver_optimizacion(G, ambulancias, ORIGEN, DESTINOS, R_k):
+def resolver_optimizacion(G, ambulancias, ORIGEN, DESTINOS, R_k, factor_relajacion):
     """Solve the multi-flow optimization model."""
     
     nodos = list(G.nodes())
@@ -311,7 +308,7 @@ def resolver_optimizacion(G, ambulancias, ORIGEN, DESTINOS, R_k):
     # Constraint 5: Capacity (relaxed)
     for u, v, key in arcos:
         capacidad = G.edges[(u, v, key)]['Capacidad_C']
-        capacidad_relajada = capacidad * FACTOR_RELAJACION
+        capacidad_relajada = capacidad * factor_relajacion
         
         velocidades_en_arco = []
         for amb_id, nodo_dest in pares_amb_inc:
@@ -575,6 +572,9 @@ if 'C_MIN' not in st.session_state:
 if 'C_MAX' not in st.session_state:
     st.session_state.C_MAX = 100
 
+if 'FACTOR_RELAJACION' not in st.session_state:
+    st.session_state.FACTOR_RELAJACION = 1.4
+
 # ============================================================================
 # STREAMLIT UI
 # ============================================================================
@@ -624,6 +624,15 @@ with st.sidebar:
         help="Maximum capacity (max speed) of street links"
     )
     
+    st.session_state.FACTOR_RELAJACION = st.number_input(
+        "Relaxation Factor",
+        min_value=1.0,
+        max_value=3.0,
+        value=st.session_state.FACTOR_RELAJACION,
+        step=0.1,
+        help="Capacity relaxation multiplier (allows sum of speeds to exceed link capacity)"
+    )
+    
     st.divider()
     
     st.info(f"""
@@ -632,6 +641,8 @@ with st.sidebar:
     - Radius: {RADIO_METROS}m
     - β (time weight): {BETA}
     - γ (cost weight): {GAMMA}
+    
+    **Current Relaxation:** {st.session_state.FACTOR_RELAJACION}x
     """)
 
 # Main content
@@ -870,7 +881,8 @@ with tab3:
                         st.session_state.ambulancias,
                         ORIGEN,
                         DESTINOS,
-                        st.session_state.R_k
+                        st.session_state.R_k,
+                        st.session_state.FACTOR_RELAJACION
                     )
                     
                     if error:
