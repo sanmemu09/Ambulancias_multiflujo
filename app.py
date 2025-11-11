@@ -545,6 +545,8 @@ if 'ambulancias' not in st.session_state:
         Ambulancia("Amb_003", personal=7, equipamiento=12, insumos=20),
         Ambulancia("Amb_004", personal=10, equipamiento=15, insumos=25),
         Ambulancia("Amb_005", personal=2, equipamiento=3, insumos=5),
+        Ambulancia("Amb_006", personal=15, equipamiento=3, insumos=5),
+        Ambulancia("Amb_007", personal=10, equipamiento=12, insumos=20),
     ]
 
 if 'G' not in st.session_state:
@@ -573,7 +575,16 @@ if 'C_MAX' not in st.session_state:
     st.session_state.C_MAX = 100
 
 if 'FACTOR_RELAJACION' not in st.session_state:
-    st.session_state.FACTOR_RELAJACION = 1.4
+    st.session_state.FACTOR_RELAJACION = 1.0
+
+if 'ORIGEN' not in st.session_state:
+    st.session_state.ORIGEN = None
+
+if 'DESTINOS' not in st.session_state:
+    st.session_state.DESTINOS = None
+
+if 'incidentes_generados' not in st.session_state:
+    st.session_state.incidentes_generados = False
 
 # ============================================================================
 # STREAMLIT UI
@@ -777,6 +788,8 @@ with tab2:
     col1, col2 = st.columns([1, 1])
     
     with col1:
+        st.subheader("📋 Configuration")
+        
         st.session_state.num_incidentes = st.number_input(
             "Number of Incidents",
             min_value=1,
@@ -786,24 +799,109 @@ with tab2:
             help="Total number of emergency incidents to simulate"
         )
         
+        st.divider()
+        
+        # Button to generate incidents
+        if st.button("🔄 Generate Incidents", use_container_width=True, type="primary"):
+            if st.session_state.G is None:
+                st.error("❌ Network not loaded! Go to Optimization tab first.")
+            else:
+                with st.spinner("🔄 Generating incident locations and types..."):
+                    random.seed(int(time.time()))
+                    ORIGEN, DESTINOS = generar_origen_destinos(
+                        st.session_state.G,
+                        st.session_state.num_incidentes
+                    )
+                    st.session_state.ORIGEN = ORIGEN
+                    st.session_state.DESTINOS = DESTINOS
+                    st.session_state.incidentes_generados = True
+                    st.success(f"✅ Generated {len(DESTINOS)} incidents!")
+                    st.rerun()
+        
         st.info(f"""
         **Current Configuration:**
-        - Incidents: {st.session_state.num_incidentes}
+        - Requested Incidents: {st.session_state.num_incidentes}
         - Available Ambulances: {len(st.session_state.ambulancias)}
         - Location: Medellín, Colombia
         - Coverage Radius: {RADIO_METROS}m
         """)
     
     with col2:
-        st.subheader("Emergency Type Distribution")
+        st.subheader("📊 Current Incidents")
+        
+        if not st.session_state.incidentes_generados or st.session_state.DESTINOS is None:
+            st.warning("⚠️ No incidents generated yet. Click **Generate Incidents** button.")
+        else:
+            # Count incidents by type
+            tipos_incidentes = Counter(st.session_state.DESTINOS.values())
+            
+            # Display metrics
+            col_a, col_b, col_c = st.columns(3)
+            col_a.metric("🔴 Critical", tipos_incidentes.get('Crítica', 0))
+            col_b.metric("🟠 Medium", tipos_incidentes.get('Media', 0))
+            col_c.metric("🟢 Light", tipos_incidentes.get('Leve', 0))
+            
+            st.metric("**Total Generated**", len(st.session_state.DESTINOS))
+            
+            st.divider()
+            
+            # Show incidents table
+            st.subheader("📍 Incident Details")
+            
+            incidentes_data = []
+            for nodo, tipo in st.session_state.DESTINOS.items():
+                incidentes_data.append({
+                    'Node ID': nodo,
+                    'Type': tipo,
+                    'Priority': {'Crítica': 3, 'Media': 2, 'Leve': 1}[tipo]
+                })
+            
+            df_incidentes = pd.DataFrame(incidentes_data)
+            df_incidentes = df_incidentes.sort_values('Priority', ascending=False)
+            
+            # Style the dataframe
+            def color_tipo_incident(row):
+                colors = {
+                    'Crítica': 'background-color: #ffcccc',
+                    'Media': 'background-color: #ffe6cc',
+                    'Leve': 'background-color: #ccffcc'
+                }
+                return [colors.get(row['Type'], '')] * len(row)
+            
+            styled_df_inc = df_incidentes.style.apply(color_tipo_incident, axis=1)
+            st.dataframe(styled_df_inc, use_container_width=True, hide_index=True)
+    
+    st.divider()
+    
+    st.subheader("ℹ️ Emergency Type Information")
+    
+    col_info1, col_info2, col_info3 = st.columns(3)
+    
+    with col_info1:
         st.markdown("""
-        The system automatically distributes incidents across three categories:
-        
-        - 🔴 **Critical:** Highest priority, fastest response
-        - 🟠 **Medium:** Standard emergency response
-        - 🟢 **Light:** Lower priority incidents
-        
-        Distribution is randomized to simulate real-world scenarios.
+        **🔴 Critical**
+        - Highest priority
+        - Fastest response required
+        - Requires advanced equipment
+        - Highest speed requirement
+        """)
+    
+    with col_info2:
+        st.markdown("""
+        **🟠 Medium**
+        - Standard emergency
+        - Moderate response time
+        - Standard equipment
+        - Medium speed requirement
+        """)
+    
+    with col_info3:
+        st.markdown("""
+        **🟢 Light**
+        - Lower priority
+        - Flexible response time
+        - Basic equipment
+        - Lower speed requirement
         """)
 
 # ============================================================================
@@ -824,6 +922,16 @@ with tab3:
                 st.error("❌ Failed to load network")
     else:
         st.info(f"✅ Network ready: {len(st.session_state.G.nodes())} nodes, {len(st.session_state.G.edges())} edges")
+    
+    # Show incident status
+    if st.session_state.incidentes_generados and st.session_state.DESTINOS is not None:
+        tipos_count = Counter(st.session_state.DESTINOS.values())
+        st.success(f"""
+        ✅ **Incidents Ready:** {len(st.session_state.DESTINOS)} incidents generated
+        - 🔴 Critical: {tipos_count.get('Crítica', 0)} | 🟠 Medium: {tipos_count.get('Media', 0)} | 🟢 Light: {tipos_count.get('Leve', 0)}
+        """)
+    else:
+        st.warning("⚠️ No incidents generated. Go to **Incidents** tab to generate them first.")
     
     st.divider()
     
@@ -855,14 +963,13 @@ with tab3:
                 st.error("❌ Network not loaded!")
             elif len(st.session_state.ambulancias) == 0:
                 st.error("❌ No ambulances in fleet!")
+            elif not st.session_state.incidentes_generados or st.session_state.DESTINOS is None:
+                st.error("❌ No incidents generated! Go to Incidents tab and generate incidents first.")
             else:
                 with st.spinner("🔄 Running optimization model..."):
-                    # Generate origin and destinations
-                    random.seed(int(time.time()))
-                    ORIGEN, DESTINOS = generar_origen_destinos(
-                        st.session_state.G,
-                        st.session_state.num_incidentes
-                    )
+                    # Use generated incidents from session state
+                    ORIGEN = st.session_state.ORIGEN
+                    DESTINOS = st.session_state.DESTINOS
                     
                     # Assign capacities if not done
                     if st.session_state.R_k is None:
