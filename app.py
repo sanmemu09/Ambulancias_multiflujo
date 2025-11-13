@@ -540,13 +540,21 @@ def crear_mapa(G, resultado):
 if 'ambulancias' not in st.session_state:
     # Initialize with default fleet
     st.session_state.ambulancias = [
-        Ambulancia("Amb_001", personal=3, equipamiento=5, insumos=10),
-        Ambulancia("Amb_002", personal=5, equipamiento=8, insumos=15),
-        Ambulancia("Amb_003", personal=7, equipamiento=12, insumos=20),
-        Ambulancia("Amb_004", personal=10, equipamiento=15, insumos=25),
-        Ambulancia("Amb_005", personal=2, equipamiento=3, insumos=5),
-        Ambulancia("Amb_006", personal=15, equipamiento=3, insumos=5),
-        Ambulancia("Amb_007", personal=10, equipamiento=12, insumos=20),
+        Ambulancia("Amb_001", personal=3, equipamiento=5, insumos=10),   # Costo: 85 (Leve)
+        Ambulancia("Amb_002", personal=5, equipamiento=8, insumos=15),   # Costo: 135 (Media)
+        Ambulancia("Amb_003", personal=7, equipamiento=12, insumos=20),  # Costo: 190 (Media)
+        Ambulancia("Amb_004", personal=10, equipamiento=15, insumos=25), # Costo: 250 (Crítica)
+        Ambulancia("Amb_005", personal=2, equipamiento=3, insumos=5),    # Costo: 50 (Leve)
+        Ambulancia("Amb_006", personal=4, equipamiento=6, insumos=12),   # Costo: 106 (Media)
+        Ambulancia("Amb_007", personal=6, equipamiento=10, insumos=18),  # Costo: 164 (Media)
+        Ambulancia("Amb_008", personal=8, equipamiento=14, insumos=22),  # Costo: 216 (Crítica)
+        Ambulancia("Amb_009", personal=3, equipamiento=4, insumos=8),    # Costo: 74 (Leve)
+        Ambulancia("Amb_010", personal=12, equipamiento=18, insumos=30), # Costo: 300 (Crítica)
+        Ambulancia("Amb_011", personal=5, equipamiento=7, insumos=13),   # Costo: 124 (Media)
+        Ambulancia("Amb_012", personal=2, equipamiento=5, insumos=7),    # Costo: 66 (Leve)
+        Ambulancia("Amb_013", personal=7, equipamiento=9, insumos=16),   # Costo: 163 (Media)
+        Ambulancia("Amb_014", personal=9, equipamiento=13, insumos=24),  # Costo: 227 (Crítica)
+        Ambulancia("Amb_015", personal=1, equipamiento=2, insumos=4)     # Costo: 32 (Desconocido)
     ]
 
 if 'G' not in st.session_state:
